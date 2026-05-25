@@ -1,4 +1,4 @@
-import getDb from "@/lib/db";
+import { query, execute, initDb } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import AppStatusSelect from "./AppStatusSelect";
 
@@ -9,14 +9,13 @@ interface Application {
 
 async function updateAppStatus(formData: FormData) {
   "use server";
-  const db = getDb();
-  db.prepare("UPDATE adoption_applications SET status = ? WHERE id = ?").run(formData.get("status"), formData.get("id"));
+  await execute("UPDATE adoption_applications SET status = ? WHERE id = ?", [String(formData.get("status")), String(formData.get("id"))]);
   revalidatePath("/admin/applications");
 }
 
-export default function AdminApplicationsPage() {
-  const db = getDb();
-  const apps = db.prepare("SELECT * FROM adoption_applications ORDER BY created_at DESC").all() as Application[];
+export default async function AdminApplicationsPage() {
+  await initDb();
+  const apps = await query<Application>("SELECT * FROM adoption_applications ORDER BY created_at DESC");
 
   return (
     <div>

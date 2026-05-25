@@ -1,10 +1,15 @@
 import Link from "next/link";
-import getDb from "@/lib/db";
+import { query, initDb } from "@/lib/db";
 import DogCard from "@/components/DogCard";
 
-export default function Home() {
-  const db = getDb();
-  const featuredDogs = db.prepare("SELECT * FROM dogs WHERE status = 'Available' LIMIT 3").all() as Dog[];
+interface Dog {
+  id: number; name: string; breed: string; age: string; gender: string;
+  size: string; status: string; bio: string; image_url: string;
+}
+
+export default async function Home() {
+  await initDb();
+  const featuredDogs = await query<Dog>("SELECT * FROM dogs WHERE status = 'Available' LIMIT 3");
 
   return (
     <div>
@@ -31,18 +36,9 @@ export default function Home() {
       {/* Stats */}
       <section className="bg-amber-100 py-12 px-4">
         <div className="max-w-4xl mx-auto grid grid-cols-3 gap-6 text-center">
-          <div>
-            <div className="text-4xl font-bold text-amber-800">500+</div>
-            <div className="text-amber-700 text-sm mt-1">Dogs Rescued</div>
-          </div>
-          <div>
-            <div className="text-4xl font-bold text-amber-800">450+</div>
-            <div className="text-amber-700 text-sm mt-1">Happy Adoptions</div>
-          </div>
-          <div>
-            <div className="text-4xl font-bold text-amber-800">10+</div>
-            <div className="text-amber-700 text-sm mt-1">Years of Love</div>
-          </div>
+          <div><div className="text-4xl font-bold text-amber-800">500+</div><div className="text-amber-700 text-sm mt-1">Dogs Rescued</div></div>
+          <div><div className="text-4xl font-bold text-amber-800">450+</div><div className="text-amber-700 text-sm mt-1">Happy Adoptions</div></div>
+          <div><div className="text-4xl font-bold text-amber-800">10+</div><div className="text-amber-700 text-sm mt-1">Years of Love</div></div>
         </div>
       </section>
 
@@ -52,9 +48,7 @@ export default function Home() {
           <h2 className="text-3xl font-bold text-center text-amber-900 mb-2">Dogs Looking for Homes</h2>
           <p className="text-center text-amber-700 mb-10">These sweet souls are waiting to meet you</p>
           <div className="grid md:grid-cols-3 gap-8">
-            {featuredDogs.map((dog) => (
-              <DogCard key={dog.id} dog={dog} />
-            ))}
+            {featuredDogs.map((dog) => <DogCard key={dog.id} dog={dog} />)}
           </div>
           <div className="text-center mt-10">
             <Link href="/dogs" className="bg-amber-600 hover:bg-amber-700 text-white px-8 py-3 rounded-full font-semibold transition-colors">
@@ -90,26 +84,10 @@ export default function Home() {
         <h2 className="text-3xl font-bold mb-4">Can't Adopt? You Can Still Help!</h2>
         <p className="text-amber-100 mb-8 max-w-xl mx-auto">Donate, volunteer, or foster — every little bit helps us save more lives.</p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Link href="/donate" className="bg-white text-amber-800 px-8 py-3 rounded-full font-bold hover:bg-amber-100 transition-colors">
-            Make a Donation
-          </Link>
-          <Link href="/donate#volunteer" className="border-2 border-white text-white px-8 py-3 rounded-full font-bold hover:bg-white/20 transition-colors">
-            Volunteer
-          </Link>
+          <Link href="/donate" className="bg-white text-amber-800 px-8 py-3 rounded-full font-bold hover:bg-amber-100 transition-colors">Make a Donation</Link>
+          <Link href="/donate#volunteer" className="border-2 border-white text-white px-8 py-3 rounded-full font-bold hover:bg-white/20 transition-colors">Volunteer</Link>
         </div>
       </section>
     </div>
   );
-}
-
-interface Dog {
-  id: number;
-  name: string;
-  breed: string;
-  age: string;
-  gender: string;
-  size: string;
-  status: string;
-  bio: string;
-  image_url: string;
 }

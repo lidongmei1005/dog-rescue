@@ -7,7 +7,7 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "picsum.photos" },
     ],
   },
-  serverExternalPackages: ["better-sqlite3"],
+  serverExternalPackages: ["@libsql/client"],
 };
 
 export default nextConfig;

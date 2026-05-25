@@ -1,20 +1,18 @@
-import getDb from "@/lib/db";
+import { query, initDb } from "@/lib/db";
 
 interface Resource {
-  id: number; title: string; description: string; category: string; url: string; created_at: string;
+  id: number; title: string; description: string; category: string; url: string;
 }
 
 const categoryIcons: Record<string, string> = {
   "Getting Started": "🏠",
   "Training & Behavior": "🎓",
   "Health & Care": "🏥",
-  "Nutrition": "🦴",
-  "Resources": "📚",
 };
 
-export default function ResourcesPage() {
-  const db = getDb();
-  const resources = db.prepare("SELECT * FROM resources ORDER BY category, created_at DESC").all() as Resource[];
+export default async function ResourcesPage() {
+  await initDb();
+  const resources = await query<Resource>("SELECT * FROM resources ORDER BY category, created_at DESC");
 
   const byCategory: Record<string, Resource[]> = {};
   for (const r of resources) {
@@ -34,8 +32,7 @@ export default function ResourcesPage() {
         {Object.entries(byCategory).map(([category, items]) => (
           <div key={category} className="mb-12">
             <h2 className="text-2xl font-bold text-amber-900 mb-6 flex items-center gap-2">
-              <span>{categoryIcons[category] || "📄"}</span>
-              <span>{category}</span>
+              <span>{categoryIcons[category] || "📄"}</span><span>{category}</span>
             </h2>
             <div className="grid gap-4">
               {items.map((r) => (
@@ -44,24 +41,14 @@ export default function ResourcesPage() {
                   <div className="flex-1">
                     <h3 className="font-bold text-amber-900 text-lg mb-1">{r.title}</h3>
                     {r.description && <p className="text-gray-600 text-sm mb-3">{r.description}</p>}
-                    {r.url && (
-                      <a href={r.url} target="_blank" rel="noopener noreferrer" className="text-amber-600 hover:text-amber-800 text-sm font-semibold inline-flex items-center gap-1">
-                        Read More →
-                      </a>
-                    )}
+                    {r.url && <a href={r.url} target="_blank" rel="noopener noreferrer" className="text-amber-600 hover:text-amber-800 text-sm font-semibold">Read More →</a>}
                   </div>
                 </div>
               ))}
             </div>
           </div>
         ))}
-
-        {resources.length === 0 && (
-          <div className="text-center py-16 text-amber-600">
-            <div className="text-5xl mb-4">📭</div>
-            <p>No resources posted yet. Check back soon!</p>
-          </div>
-        )}
+        {resources.length === 0 && <div className="text-center py-16 text-amber-600"><div className="text-5xl mb-4">📭</div><p>No resources posted yet.</p></div>}
       </div>
     </div>
   );
