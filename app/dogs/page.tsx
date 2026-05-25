@@ -1,4 +1,4 @@
-﻿export const dynamic = 'force-dynamic'
+export const dynamic = 'force-dynamic'
 
 import { query, initDb } from "@/lib/db";
 import DogCard from "@/components/DogCard";
@@ -30,7 +30,7 @@ export default async function DogsPage({ searchParams }: { searchParams: Promise
       </div>
 
       {dogs.length === 0 ? (
-        <div className="text-center py-16 text-amber-600"><div className="text-5xl mb-4">ðŸ¾</div><p className="text-lg">No dogs found.</p></div>
+        <div className="text-center py-16 text-amber-600"><div className="text-5xl mb-4">🐾</div><p className="text-lg">No dogs found.</p></div>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
           {dogs.map((dog) => <DogCard key={dog.id} dog={dog} />)}
@@ -39,4 +39,3 @@ export default async function DogsPage({ searchParams }: { searchParams: Promise
     </div>
   );
 }
-
