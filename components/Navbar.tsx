@@ -1,12 +1,29 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLanguage } from "./LanguageProvider";
 import { t } from "@/lib/translations";
+
+interface NavUser { name: string; role: string; }
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
   const { lang, setLang, tx } = useLanguage();
+  const [user, setUser] = useState<NavUser | null>(null);
+
+  useEffect(() => {
+    fetch("/api/auth/me").then(r => r.ok ? r.json() : null).then(d => {
+      if (d?.user) setUser(d.user);
+    }).catch(() => {});
+  }, []);
+
+  async function logout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    setUser(null);
+    window.location.href = "/";
+  }
+
+  const dashboardHref = user?.role === 'admin' ? '/admin' : user?.role === 'shelter' ? '/shelter/dashboard' : null;
 
   const links = [
     { href: "/dogs", label: tx(t.nav_adopt) },
@@ -33,6 +50,26 @@ export default function Navbar() {
           <Link href="/dogs" className="bg-amber-400 text-amber-950 px-4 py-2 rounded-full font-bold hover:bg-amber-300 transition-colors">
             {tx(t.nav_adopt_now)}
           </Link>
+
+          {/* Auth area */}
+          {user ? (
+            <div className="flex items-center gap-3">
+              {dashboardHref && (
+                <Link href={dashboardHref} className="text-sm text-amber-200 hover:text-white font-semibold">
+                  {user.role === 'admin' ? '⚙️ Admin' : '🏠 Dashboard'}
+                </Link>
+              )}
+              <span className="text-sm text-amber-300">Hi, {user.name.split(' ')[0]}</span>
+              <button onClick={logout} className="text-xs bg-amber-700 hover:bg-amber-600 px-3 py-1.5 rounded-full border border-amber-500">
+                Sign Out
+              </button>
+            </div>
+          ) : (
+            <Link href="/login" className="text-sm bg-amber-700 hover:bg-amber-600 px-3 py-1.5 rounded-full border border-amber-500 font-semibold">
+              Sign In
+            </Link>
+          )}
+
           {/* Language switcher */}
           <button
             onClick={() => setLang(lang === 'en' ? 'zh' : 'en')}
@@ -70,6 +107,21 @@ export default function Navbar() {
           <Link href="/dogs" className="inline-block mt-2 bg-amber-400 text-amber-950 px-4 py-2 rounded-full font-bold" onClick={() => setOpen(false)}>
             {tx(t.nav_adopt_now)}
           </Link>
+          <div className="mt-3 border-t border-amber-700 pt-3">
+            {user ? (
+              <div className="flex flex-col gap-2">
+                {dashboardHref && (
+                  <Link href={dashboardHref} className="text-amber-200 text-sm font-semibold" onClick={() => setOpen(false)}>
+                    {user.role === 'admin' ? '⚙️ Admin Panel' : '🏠 My Dashboard'}
+                  </Link>
+                )}
+                <span className="text-amber-300 text-sm">Hi, {user.name}</span>
+                <button onClick={logout} className="text-left text-sm text-red-300 hover:text-red-200">Sign Out</button>
+              </div>
+            ) : (
+              <Link href="/login" className="text-amber-200 text-sm font-semibold" onClick={() => setOpen(false)}>Sign In / Register</Link>
+            )}
+          </div>
         </div>
       )}
     </nav>

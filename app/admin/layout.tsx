@@ -9,6 +9,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <Link href="/admin/dogs" className="hover:text-amber-200 text-sm">Dogs</Link>
           <Link href="/admin/applications" className="hover:text-amber-200 text-sm">Applications</Link>
           <Link href="/admin/resources" className="hover:text-amber-200 text-sm">Resources</Link>
+          <Link href="/admin/users" className="hover:text-amber-200 text-sm">Users</Link>
         </div>
         <Link href="/" className="text-sm text-amber-300 hover:text-white">← Public Site</Link>
       </nav>

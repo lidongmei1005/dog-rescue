@@ -1,41 +1,23 @@
-/**
- * Database layer
- * - Development: local SQLite file via better-sqlite3
- * - Production (Vercel): Turso cloud DB via @libsql/client
- *
- * All exported helpers are async-safe so they work in both Server Components
- * and Server Actions.
- */
+import type { InValue } from '@libsql/client';
+import type { Client } from '@libsql/client';
 
-import type { Client, InValue } from '@libsql/client';
-
-// ─── Singleton ────────────────────────────────────────────────────────────────
 let _client: Client | null = null;
 
 function getClient(): Client {
   if (_client) return _client;
-
   const { createClient } = require('@libsql/client') as typeof import('@libsql/client');
-
   if (process.env.TURSO_DATABASE_URL) {
-    // Production: Turso remote DB
-    _client = createClient({
-      url: process.env.TURSO_DATABASE_URL,
-      authToken: process.env.TURSO_AUTH_TOKEN,
-    });
+    _client = createClient({ url: process.env.TURSO_DATABASE_URL, authToken: process.env.TURSO_AUTH_TOKEN });
   } else {
-    // Development: local SQLite file
     const path = require('path') as typeof import('path');
     const fs = require('fs') as typeof import('fs');
     const dataDir = path.join(process.cwd(), 'data');
     if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
     _client = createClient({ url: `file:${path.join(dataDir, 'rescue.db')}` });
   }
-
   return _client;
 }
 
-// ─── Query helpers ────────────────────────────────────────────────────────────
 type Row = Record<string, unknown>;
 
 export async function query<T = Row>(sql: string, args: InValue[] = []): Promise<T[]> {
@@ -48,24 +30,30 @@ export async function queryOne<T = Row>(sql: string, args: InValue[] = []): Prom
   return rows[0] ?? null;
 }
 
-export async function execute(sql: string, args: InValue[] = []): Promise<void> {
-  await getClient().execute({ sql, args });
+export async function execute(sql: string, args: InValue[] = []): Promise<{ lastInsertRowid?: number | bigint }> {
+  const result = await getClient().execute({ sql, args });
+  return { lastInsertRowid: result.lastInsertRowid };
 }
 
-export async function executeMany(statements: { sql: string; args?: InValue[] }[]): Promise<void> {
-  await getClient().batch(statements.map(s => ({ sql: s.sql, args: s.args ?? [] })));
-}
-
-// ─── Schema init + seed ───────────────────────────────────────────────────────
 let _initialized = false;
 
 export async function initDb(): Promise<void> {
   if (_initialized) return;
   _initialized = true;
-
   const client = getClient();
 
   await client.executeMultiple(`
+    CREATE TABLE IF NOT EXISTS users (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      email TEXT NOT NULL UNIQUE,
+      password_hash TEXT NOT NULL,
+      name TEXT NOT NULL,
+      role TEXT NOT NULL DEFAULT 'user',
+      status TEXT NOT NULL DEFAULT 'active',
+      shelter_name TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
     CREATE TABLE IF NOT EXISTS dogs (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
@@ -79,8 +67,12 @@ export async function initDb(): Promise<void> {
       good_with_kids INTEGER DEFAULT 1,
       good_with_dogs INTEGER DEFAULT 1,
       good_with_cats INTEGER DEFAULT 0,
-      created_at TEXT DEFAULT (datetime('now'))
+      shelter_id INTEGER,
+      shelter_name TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (shelter_id) REFERENCES users(id)
     );
+
     CREATE TABLE IF NOT EXISTS adoption_applications (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       dog_id INTEGER,
@@ -92,9 +84,13 @@ export async function initDb(): Promise<void> {
       experience TEXT,
       home_type TEXT,
       other_pets TEXT,
+      user_id INTEGER,
       status TEXT DEFAULT 'Pending',
-      created_at TEXT DEFAULT (datetime('now'))
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (dog_id) REFERENCES dogs(id),
+      FOREIGN KEY (user_id) REFERENCES users(id)
     );
+
     CREATE TABLE IF NOT EXISTS resources (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       title TEXT NOT NULL,
@@ -103,6 +99,7 @@ export async function initDb(): Promise<void> {
       url TEXT,
       created_at TEXT DEFAULT (datetime('now'))
     );
+
     CREATE TABLE IF NOT EXISTS volunteer_signups (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
@@ -112,6 +109,7 @@ export async function initDb(): Promise<void> {
       availability TEXT,
       created_at TEXT DEFAULT (datetime('now'))
     );
+
     CREATE TABLE IF NOT EXISTS contact_messages (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
@@ -122,16 +120,27 @@ export async function initDb(): Promise<void> {
     );
   `);
 
-  // Seed if empty
-  const rows = await query<{ count: number }>('SELECT COUNT(*) as count FROM dogs');
-  if (rows[0]?.count === 0) {
+  // Seed admin user
+  const adminExists = await queryOne('SELECT id FROM users WHERE role = ?', ['admin']);
+  if (!adminExists) {
+    const { hashPassword } = await import('./auth');
+    const hash = await hashPassword('admin123');
+    await execute(
+      `INSERT INTO users (email, password_hash, name, role, status) VALUES (?, ?, ?, ?, ?)`,
+      ['admin@pawpawhome.org', hash, 'Admin', 'admin', 'active']
+    );
+  }
+
+  // Seed dogs if empty
+  const dogCount = await queryOne<{ count: number }>('SELECT COUNT(*) as count FROM dogs');
+  if (dogCount?.count === 0) {
     const dogs = [
       ['Buddy', 'Golden Retriever', '3 years', 'Male', 'Large', 'Available', "Buddy is a gentle giant who loves nothing more than a good belly rub and afternoon walks. He's great with kids and would thrive in an active family.", 'https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=600&h=400&fit=crop', 1, 1, 0],
-      ['Luna', 'Border Collie Mix', '2 years', 'Female', 'Medium', 'Available', "Luna is an intelligent and energetic girl who loves to play fetch and learn new tricks. She needs space to run and mental stimulation.", 'https://images.unsplash.com/photo-1576201836106-db1758fd1c97?w=600&h=400&fit=crop', 1, 1, 1],
-      ['Max', 'Labrador Retriever', '5 years', 'Male', 'Large', 'Available', "Max is a sweet and calm boy who loves cuddles on the couch. He's house-trained and well-behaved — perfect for a quieter home.", 'https://images.unsplash.com/photo-1561037404-61cd46aa615b?w=600&h=400&fit=crop', 1, 1, 0],
-      ['Daisy', 'Beagle', '4 years', 'Female', 'Small', 'Pending', "Daisy is a curious and friendly beagle who loves exploring the outdoors. She follows her nose everywhere and needs a securely fenced yard.", 'https://images.unsplash.com/photo-1551717743-49959800b1f6?w=600&h=400&fit=crop', 1, 1, 0],
-      ['Charlie', 'Australian Shepherd', '1 year', 'Male', 'Medium', 'Available', "Charlie is a young and playful pup with boundless energy and a heart of gold. He's still learning but picks up training quickly!", 'https://images.unsplash.com/photo-1568572933382-74d440642117?w=600&h=400&fit=crop', 0, 1, 0],
-      ['Bella', 'Chihuahua Mix', '7 years', 'Female', 'Small', 'Available', "Bella is a tiny but mighty girl with lots of love to give. She has a big personality and would do best as the only pet.", 'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=600&h=400&fit=crop', 0, 0, 0],
+      ['Luna', 'Border Collie Mix', '2 years', 'Female', 'Medium', 'Available', "Luna is an intelligent and energetic girl who loves to play fetch and learn new tricks.", 'https://images.unsplash.com/photo-1576201836106-db1758fd1c97?w=600&h=400&fit=crop', 1, 1, 1],
+      ['Max', 'Labrador Retriever', '5 years', 'Male', 'Large', 'Available', "Max is a sweet and calm boy who loves cuddles on the couch.", 'https://images.unsplash.com/photo-1561037404-61cd46aa615b?w=600&h=400&fit=crop', 1, 1, 0],
+      ['Daisy', 'Beagle', '4 years', 'Female', 'Small', 'Pending', "Daisy is a curious and friendly beagle who loves exploring the outdoors.", 'https://images.unsplash.com/photo-1551717743-49959800b1f6?w=600&h=400&fit=crop', 1, 1, 0],
+      ['Charlie', 'Australian Shepherd', '1 year', 'Male', 'Medium', 'Available', "Charlie is a young and playful pup with boundless energy and a heart of gold.", 'https://images.unsplash.com/photo-1568572933382-74d440642117?w=600&h=400&fit=crop', 0, 1, 0],
+      ['Bella', 'Chihuahua Mix', '7 years', 'Female', 'Small', 'Available', "Bella is a tiny but mighty girl with lots of love to give.", 'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?w=600&h=400&fit=crop', 0, 0, 0],
     ];
     for (const d of dogs) {
       await execute(
@@ -139,6 +148,7 @@ export async function initDb(): Promise<void> {
         d as InValue[]
       );
     }
+
     const resources = [
       ['New Dog Owner Guide', 'Everything you need to know in your first week with your rescue dog.', 'Getting Started', 'https://www.humanesociety.org/resources/bringing-your-new-dog-home'],
       ['Understanding Dog Body Language', "Learn to read your dog's signals to build a stronger bond.", 'Training & Behavior', 'https://www.akc.org/expert-advice/training/dog-body-language/'],
@@ -148,10 +158,7 @@ export async function initDb(): Promise<void> {
       ['Dog-Proofing Your Home', 'Step-by-step guide to make your home safe for a new dog.', 'Getting Started', null],
     ];
     for (const r of resources) {
-      await execute(
-        `INSERT INTO resources (title, description, category, url) VALUES (?,?,?,?)`,
-        r as InValue[]
-      );
+      await execute(`INSERT INTO resources (title, description, category, url) VALUES (?,?,?,?)`, r as InValue[]);
     }
   }
 }

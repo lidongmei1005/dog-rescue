@@ -1,12 +1,20 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLanguage } from "@/components/LanguageProvider";
 import { t } from "@/lib/translations";
+import Link from "next/link";
+
+interface NavUser { name: string; role: string; status: string; }
 
 export default function AdoptionForm({ dogId, dogName }: { dogId: number; dogName: string }) {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState<NavUser | null | undefined>(undefined); // undefined = loading
   const { tx } = useLanguage();
+
+  useEffect(() => {
+    fetch("/api/auth/me").then(r => r.json()).then(d => setUser(d.user || null)).catch(() => setUser(null));
+  }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -32,12 +40,36 @@ export default function AdoptionForm({ dogId, dogName }: { dogId: number; dogNam
     );
   }
 
+  // Loading state
+  if (user === undefined) {
+    return <div className="bg-white rounded-2xl shadow-md p-8 text-center text-gray-400">Loading...</div>;
+  }
+
+  // Not logged in
+  if (!user) {
+    return (
+      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-8 text-center">
+        <div className="text-5xl mb-4">🔒</div>
+        <h3 className="text-xl font-bold text-amber-900 mb-2">Sign In to Adopt</h3>
+        <p className="text-amber-700 mb-6">Please create an account or sign in to submit an adoption application.</p>
+        <div className="flex gap-3 justify-center">
+          <Link href={`/login?redirect=/dogs/${dogId}`} className="bg-amber-600 hover:bg-amber-700 text-white px-6 py-2 rounded-full font-bold">
+            Sign In
+          </Link>
+          <Link href="/signup" className="border border-amber-600 text-amber-700 hover:bg-amber-100 px-6 py-2 rounded-full font-bold">
+            Create Account
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-md p-8 grid gap-5">
       <div className="grid md:grid-cols-2 gap-5">
         <div>
           <label className="block text-sm font-semibold text-amber-900 mb-1">{tx(t.form_name)} *</label>
-          <input name="applicant_name" required className="w-full border border-amber-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400" />
+          <input name="applicant_name" required defaultValue={user.name} className="w-full border border-amber-200 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-amber-400" />
         </div>
         <div>
           <label className="block text-sm font-semibold text-amber-900 mb-1">{tx(t.form_email)} *</label>
