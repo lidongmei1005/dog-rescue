@@ -16,7 +16,7 @@ export const t = {
   footer_copy: { en: 'Made with ❤️ for dogs everywhere.', zh: '用 ❤️ 为每一只狗狗而制作。' },
 
   // Home
-  home_hero_title: { en: 'Every Dog Deserves a Loving Home', zh: '每只狗都值得一个充满爱的家' },
+  home_hero_title: { en: 'Every Dog Deserves a Loving Home', zh: '给它一扇门，它还你一颗心' },
   home_hero_sub: { en: 'We rescue, rehabilitate, and rehome dogs in need. Your perfect companion is waiting for you.', zh: '我们救助、康复并为需要帮助的狗狗寻找新家。您的完美伴侣正在等待您。' },
   home_hero_btn1: { en: 'Meet Our Dogs 🐶', zh: '认识我们的狗狗 🐶' },
   home_hero_btn2: { en: 'Support Us ❤️', zh: '支持我们 ❤️' },
