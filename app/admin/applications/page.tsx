@@ -1,3 +1,5 @@
+﻿export const dynamic = 'force-dynamic'
+
 import { query, execute, initDb } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import AppStatusSelect from "./AppStatusSelect";
@@ -50,3 +52,4 @@ export default async function AdminApplicationsPage() {
     </div>
   );
 }
+

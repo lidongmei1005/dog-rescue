@@ -1,3 +1,5 @@
+﻿export const dynamic = 'force-dynamic'
+
 import { redirect } from "next/navigation";
 import { execute, initDb } from "@/lib/db";
 
@@ -87,3 +89,4 @@ export function DogFormFields({ dog }: { dog?: Record<string, unknown> }) {
     </>
   );
 }
+

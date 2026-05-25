@@ -1,3 +1,5 @@
+﻿export const dynamic = 'force-dynamic'
+
 import { query, execute, initDb } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 
@@ -65,7 +67,7 @@ export default async function AdminResourcesPage() {
               <tr key={r.id} className="border-t border-gray-100">
                 <td className="px-4 py-3 font-medium">{r.title}</td>
                 <td className="px-4 py-3 text-gray-500">{r.category}</td>
-                <td className="px-4 py-3">{r.url ? <a href={r.url} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline">Link</a> : "—"}</td>
+                <td className="px-4 py-3">{r.url ? <a href={r.url} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline">Link</a> : "â€”"}</td>
                 <td className="px-4 py-3">
                   <form action={deleteResource} className="inline">
                     <input type="hidden" name="id" value={r.id} />
@@ -81,3 +83,4 @@ export default async function AdminResourcesPage() {
     </div>
   );
 }
+

@@ -1,3 +1,5 @@
+﻿export const dynamic = 'force-dynamic'
+
 import { query, execute, initDb } from "@/lib/db";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
@@ -61,3 +63,4 @@ export default async function AdminDogsPage() {
     </div>
   );
 }
+
