@@ -13,6 +13,10 @@ const geistSans = Geist({
 export const metadata: Metadata = {
   title: "Paws & Hearts Rescue",
   description: "Connecting loving homes with dogs in need. Adopt, donate, and make a difference.",
+  icons: {
+    icon: "/icon.svg",
+    apple: "/apple-icon.svg",
+  },
 };
 
 export default function RootLayout({
